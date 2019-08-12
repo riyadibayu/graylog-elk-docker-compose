@@ -1,0 +1,139 @@
+version: '2.4'
+services:
+  traefik:
+    container_name: traefik
+    restart: always
+    command: --api --docker --logLevel=WARN
+    image: traefik
+    ports:
+      - "80:80"
+      - "443:443"
+#     Management on port 8080
+      - "8080:8080"
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      #Needs access to socket
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik.toml:/etc/traefik/traefik.toml:ro"
+# You need certificates to set this up safe mount them here, this assumes there is a folder defaultssl on the host. See also the traefik.toml config file.
+      - "./defaultssl/:/etc/traefik/defaultssl/:ro"
+    networks:
+      frontend:
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+  graylog2_mongo:
+    image: mongo:3
+    container_name: graylog2_mongo
+    restart: always
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      - "graylog2_mongo:/data/db"
+    networks:
+      backend_graylog2:
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+  graylog2_elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.6.2
+    container_name: graylog2elasticsearch
+    restart: always
+    command: elasticsearch -Ecluster.name='graylog'
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      - "graylog2_elasticsearch:/usr/share/elasticsearch/data"
+    networks:
+      backend_graylog2:
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:6.6.2
+    labels:
+      - "traefik.backend=kibana"
+      - "traefik.docker.network=compose_frontend"
+      - "traefik.frontend.rule=Host:metrics.bekzilla.com"
+      - "traefik.frontend.entryPoints=http,https"
+      - "traefik.port=5601"
+    networks:
+      frontend:
+      backend_graylog2:
+    links:
+      - graylog2_elasticsearch:elasticsearch
+#volumes:
+    #  - ./kibana.yml:/usr/share/kibana/config/kibana.yml
+  graylog2:
+    image: graylog/graylog:2.5
+    container_name: graylog2
+    restart: always
+    env_file:
+# Important file, to configure the environment variables:
+      - ./graylog2.env
+    labels:
+      - "traefik.backend=graylog2"
+      - "traefik.docker.network=compose_frontend"
+      - "traefik.port=9000"
+      - "traefik.frontend.entryPoints=http,https"
+# Match this to the DNS entry you're hosting on:
+      - "traefik.frontend.rule=Host:logs.bekzilla.com"
+    ports:
+      - "12201:12201/udp"
+    links:
+      - graylog2_mongo:mongo
+      - graylog2_elasticsearch:elasticsearch
+    volumes:
+      - "graylog2_graylog2-data:/usr/share/graylog/data/journal"
+      - "graylog2_graylog2-config:/usr/share/graylog/data/config"
+    networks:
+      frontend:
+      backend_graylog2:
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:6.6.2
+    volumes:
+      - ./logstash/pipeline/:/usr/share/logstash/pipeline/
+      - ./logstash/:/usr/share/logstash/config/
+      - ./logstash/patterns:/etc/logstash/patterns
+      - ./logstash/templates:/etc/logstash/templates
+      - ./logstash/conf.d/:/etc/logstash/conf.d/
+    ports:
+      - "5044:5044"
+      - "5000:5000"
+      - "5001:5002"
+      - "5002:5002"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      frontend:
+      backend_graylog2:
+    links:
+      - graylog2_elasticsearch:elasticsearch
+      
+##Volumes
+volumes:
+  graylog2_mongo:
+  graylog2_elasticsearch:
+  graylog2_graylog2-data:
+  graylog2_graylog2-config:
+ 
+##Networks
+networks:
+  frontend:
+  backend_graylog2:

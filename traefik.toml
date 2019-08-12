@@ -1,0 +1,15 @@
+[entryPoints]
+   [entryPoints.http]
+   address = ":80"
+     [entryPoints.http.redirect]
+       entryPoint = "https"
+   [entryPoints.https]
+   address = ":443"
+     [entryPoints.https.tls]
+       [[entryPoints.https.tls.certificates]]
+# Match the names of the cert and key file in the folder you're mounting.
+       CertFile = "/etc/traefik/defaultssl/log.cer"
+       KeyFile = "/etc/traefik/defaultssl/log.key"
+
+[docker]
+endpoint = "unix:///var/run/docker.sock"
