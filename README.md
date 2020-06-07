@@ -5,7 +5,6 @@ This setup is for a graylog and ELK setup that I intended to use for monitoring 
 - Graylog 3.2
 - Traefik 1.7.12
 - Latest docker CE and docker-compose
-- test
 
 The repo contains:
 - docker-compose.yml
