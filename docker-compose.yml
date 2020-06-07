@@ -4,7 +4,7 @@ services:
     container_name: traefik
     restart: always
     command: --api --docker --logLevel=WARN
-    image: traefik
+    image: traefik:v1.7
     ports:
       - "80:80"
       - "443:443"
@@ -41,7 +41,7 @@ services:
         max-size: "20m"
         max-file: "5"
   graylog2_elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.6.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.8.10
     container_name: graylog2elasticsearch
     restart: always
     command: elasticsearch -Ecluster.name='graylog'
@@ -59,7 +59,7 @@ services:
 
   kibana:
     container_name: kibana
-    image: docker.elastic.co/kibana/kibana:6.6.2
+    image: docker.elastic.co/kibana/kibana:6.8.10
     labels:
       - "traefik.backend=kibana"
       - "traefik.docker.network=compose_frontend"
@@ -74,7 +74,7 @@ services:
 #volumes:
     #  - ./kibana.yml:/usr/share/kibana/config/kibana.yml
   graylog2:
-    image: graylog/graylog:2.5
+    image: graylog/graylog:3.2
     container_name: graylog2
     restart: always
     env_file:
@@ -105,7 +105,7 @@ services:
         max-file: "5"
   logstash:
     container_name: logstash
-    image: docker.elastic.co/logstash/logstash:6.6.2
+    image: docker.elastic.co/logstash/logstash:6.8.10
     volumes:
       - ./logstash/pipeline/:/usr/share/logstash/pipeline/
       - ./logstash/:/usr/share/logstash/config/
